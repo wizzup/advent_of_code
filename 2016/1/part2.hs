@@ -83,16 +83,6 @@ main = do
   moves <- map mkMove . splitOn ", " <$> getLine
 
   let lastState = reverse $ evalState (nextState moves) startState
-  -- print $ (\(x,y) -> abs x + abs y) $ lastState
-
-  -- print lastState
-
   let segments = zip lastState (tail lastState)
-  -- print segments
-
   let point = head $ intersec segments
   print $ (\(x,y) -> abs x + abs y) $ (\(x,y) -> (round x, round y)) point
-  
-  -- print $ intersectSegSeg (0,0) (8,0) (4,4) (4,-4)
-
--- R8, R4, R4, R8
