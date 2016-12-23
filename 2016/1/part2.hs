@@ -80,7 +80,7 @@ intersec ss = do
 
 main :: IO ()
 main = do
-  moves <- map mkMove . splitOn ", " <$> getLine
+  moves <- map mkMove . splitOn ", " <$> readFile "input"
 
   let lastState = reverse $ evalState (nextState moves) startState
   let segments = zip lastState (tail lastState)

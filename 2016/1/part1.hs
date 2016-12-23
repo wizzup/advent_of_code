@@ -57,7 +57,7 @@ nextState (x:xs) = do
 
 main :: IO ()
 main = do
-  moves <- map mkMove . splitOn ", " <$> getLine
+  moves <- map mkMove . splitOn ", " <$> readFile "input"
 
   let lastState =  evalState (nextState moves) startState
   print $ (\(x,y) -> abs x + abs y) lastState
