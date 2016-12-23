@@ -54,7 +54,6 @@ step L B8 = B7
 step R B8 = B9
 
 step L B9 = B8
-step _ B9 = B9
 
 step U BA = B6
 step R BA = BB
