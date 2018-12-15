@@ -14,7 +14,8 @@ with haskell.packages.${compiler};
 
 let
   ghc = ghcWithPackages (p: with p; [
-          # split
+          split
+          time_1_9_2
           # hspec
           # fgl
         ]);
@@ -22,7 +23,7 @@ in
 mkShell {
   name = "${compiler}-sh";
 
-  buildInputs = [ ghc ghcid doctest ];
+  buildInputs = [ ghc hlint ghcid doctest ];
 
   shellHook = ''
     eval "$(egrep ^export "$(type -p ghc)")"
