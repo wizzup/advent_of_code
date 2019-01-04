@@ -7,23 +7,21 @@
 # To list avaliable ghc version:
 # $ nix-env -qaPA nixos.haskell.compiler
 
-{ pkgs ? import <nixpkgs> {}, compiler ? "ghc862" }:
+{ pkgs ? import <nixpkgs> {}, compiler ? "ghc863" }:
 
 with pkgs;
 with haskell.packages.${compiler};
 
 let
-  ghc = ghcWithPackages (p: with p; [
-          split
-          time_1_9_2
-          # hspec
-          # fgl
+  ghc = ghcWithHoogle (p: with p; [
+          # split
         ]);
 in
 mkShell {
   name = "${compiler}-sh";
 
-  buildInputs = [ ghc hlint ghcid doctest ];
+  # buildInputs = [ ghc hlint ghcid doctest hoogle hie86 ghc-mod86 ];
+  buildInputs = [ ghc hlint ghcid doctest hie86 ];
 
   shellHook = ''
     eval "$(egrep ^export "$(type -p ghc)")"
