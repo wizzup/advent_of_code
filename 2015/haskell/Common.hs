@@ -23,7 +23,7 @@ rpInt = read <$> RP.munch1 isDigit
 bothV :: a -> ((->) a b,(->) a c) -> (b,c)
 bothV a (f, g) = (f a, g a)
 
--- | Apply a function on tuple of values
+-- | Apply a function on tuple of values, closely related to Control.Arrow.(***)
 -- >>> bothF succ (0, 1)
 -- (1,2)
 --
