@@ -14,15 +14,15 @@ with haskell.packages.${compiler};
 
 let
   ghc = ghcWithPackages (p: with p; [
-          cryptohash-md5     # for md5 hash (2015, day4)
-          base16-bytestring  # for hex conversion (2015, day4)
-          # split
+          cryptohash-md5       # for md5 hash (2015, day4)
+          base16-bytestring    # for hex conversion (2015, day4)
+          regex-posix          # for regex (2015, day5)
         ]);
 in
 mkShell {
   name = "${compiler}-sh";
 
-  buildInputs = [ ghc hlint ghcid doctest hoogle hie86 ghc-mod86 ];
+  buildInputs = [ cabal-install ghc hlint ghcid doctest hoogle hie86 ghc-mod86 ];
 
   shellHook = ''
     eval "$(egrep ^export "$(type -p ghc)")"
