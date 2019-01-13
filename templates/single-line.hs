@@ -17,3 +17,9 @@ stepOne _ = 0
 
 stepTwo :: String -> Int
 stepTwo _ = 1
+
+readSingleLine :: FilePath -> IO String
+readSingleLine fp = head . lines <$> readFile fp
+
+getInputs :: IO [Int]
+getInputs = map (read . (:[])) <$> readSingleLine "../input/01.txt"
