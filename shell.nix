@@ -14,6 +14,7 @@ with haskell.packages.${compiler};
 
 let
   ghc = ghcWithPackages (p: with p; [
+          QuickCheck
           cryptohash-md5       # for md5 hash (2015, day4)
           base16-bytestring    # for hex conversion (2015, day4)
           regex-posix          # for regex (2015, day5)
