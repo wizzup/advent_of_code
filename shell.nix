@@ -7,7 +7,7 @@
 # To list avaliable ghc version:
 # $ nix-env -qaPA nixos.haskell.compiler
 
-{ pkgs ? import <nixpkgs> {}, compiler ? "ghc863" }:
+{ pkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
 
 with pkgs;
 with haskell.packages.${compiler};
@@ -24,7 +24,16 @@ in
 mkShell {
   name = "${compiler}-sh";
 
-  buildInputs = [ cabal-install ghc hlint ghcid doctest hoogle hie86 ghc-mod86 ];
+  buildInputs = [
+    cabal-install
+    ghc
+    hlint
+    ghcid
+    doctest
+    hoogle
+    # hie86
+    # ghc-mod86
+  ];
 
   shellHook = ''
     eval "$(egrep ^export "$(type -p ghc)")"
