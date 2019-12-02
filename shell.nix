@@ -1,42 +1,37 @@
-# shell.nix : Haskell shell for nix-shell
-
-# Overrideable ghc version by passing compiler env variable
-# Example:
-# $ nix-shell shell.nix --argstr compiler ghc7103
-
-# To list avaliable ghc version:
-# $ nix-env -qaPA nixos.haskell.compiler
-
-{ pkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
+{ pkgs ? import <nixpkgs> {} }:
 
 with pkgs;
-with haskell.packages.${compiler};
+# with haskellPackages;
 
 let
-  ghc = ghcWithPackages (p: with p; [
+  ghc = haskellPackages.ghcWithPackages (p: with p; [
           QuickCheck
           cryptohash-md5       # for md5 hash (2015, day4)
           base16-bytestring    # for hex conversion (2015, day4)
           regex-posix          # for regex (2015, day5)
           extra                # for groupOn (2017, day1)
+          split                # for splitOn (2019, day2)
         ]);
-in
-mkShell {
-  name = "${compiler}-sh";
 
-  buildInputs = [
+  hss = with haskellPackages; [
     cabal-install
     ghc
     hlint
     ghcid
+    hie
     doctest
     hoogle
-    # hie86
-    # ghc-mod86
   ];
 
-  shellHook = ''
-    eval "$(egrep ^export "$(type -p ghc)")"
-    export PS1="\[\033[1;32m\][$name:\W]\n$ \[\033[0m\]"
-  '';
-}
+  pys = [ python3 ];
+in
+  mkShell {
+    name = "aoc-sh";
+
+    buildInputs = hss ++ pys;
+
+    shellHook = ''
+      eval "$(egrep ^export "$(type -p ghc)")"
+      export PS1="\[\033[1;32m\][$name:\W]\n$ \[\033[0m\]"
+    '';
+  }
