@@ -1,7 +1,6 @@
 ---------------------------------------------------------------------
 -- https://adventofcode.com/2019/day/7
--- hacked the simulator from day 5
--- WARNING : only run work on my input file
+-- Day5 code re-write with multiple input output
 ---------------------------------------------------------------------
 
 import Data.List.Extra
@@ -192,43 +191,40 @@ readCode = R.many (readStep R.+++ readOper)
 
 type Memory = M.IntMap Int
 
--- HACK: mem[8] = mode (0..4), m[9] = pipeline i/o
--- WARNING : only run work on my input file
-loadProg' :: (Int,Int) -> String -> Memory
-loadProg' (md,ip) ss
-  = M.adjust (const md) 8
-  $ M.adjust (const ip) 9 org
-  where
-    org = M.fromList . zip [0..] . map read . splitOn "," $ ss
+loadProg :: String -> Memory
+loadProg = M.fromList . zip [0..] . map read . splitOn ","
+
+memToProg :: Memory -> String
+memToProg = intercalate "," . map show . M.elems
 
 memToProg' :: Int -> Memory -> String
 memToProg' n = intercalate "," . map show . drop n . M.elems
 
 data Computer
   = Computer {
-    cMem :: Memory,
-    cPC :: Int,
-    cIn :: Int,
-    cOut :: Int,
+    cMem :: Memory,       -- memory for instruction and codes
+    cPC :: Int,           -- program counter
+    cIn :: [Int],         -- inputs
+    cOut :: Int,          -- output
     isHalt :: Bool
   }
+  -- deriving Show
 
 instance Show Computer where
   show (Computer mem pc _ o _)
-    = printf "pc: %4i out: %4i " pc o
-    <> printf "op: %-15s" op <> " "
+    = printf "pc: %4i out: %4i op: %-16s" pc o op
     <> "mem@pc: "
-    <> mem'
+    <> take 15 mem'
     where
-      mem' = take 25 ( memToProg' pc mem)
-      op = show . fst . head $ R.readP_to_S readOper mem'
+      mem' = memToProg' pc mem
+      op = show $ fst $ head $ R.readP_to_S readOper mem'
 
-mkComputer' :: (Int,Int) -> String -> Computer
-mkComputer' (md,ip) prog = Computer (loadProg' (md,ip) prog) 0 0 0 False
+
+mkComputer :: [Int] -> String -> Computer
+mkComputer is prog = Computer (loadProg prog) 0 is 0 False
 
 step :: Computer -> Computer
-step com@(Computer mem pc i _ h)
-  -- | null parse     = com {isHalt = True}
+step com@(Computer mem pc is o h)
   | null parse     = error $ "null parse:"
                   <> show pc <> ":"
                   <> show ( take 20 next)
@@ -236,7 +232,7 @@ step com@(Computer mem pc i _ h)
     = case op of
         Add m x y z -> doAdd m x y z
         Mul m x y z -> doMul m x y z
-        Input _ _   -> com {cPC = pc + 2}
+        Input m x   -> doInput m x
         Output m x  -> doOutput m x
         Halt        -> com {isHalt = True}
         Jnz m x y   -> doJnz m x y
@@ -248,7 +244,14 @@ step com@(Computer mem pc i _ h)
     parse = stepR . intercalate "," . map show . drop pc $ M.elems mem
     op = fst . head $ parse
     fnd k = M.findWithDefault 0 k mem
-    doOutput m x = Computer mem (pc + 2) i opt h
+    doInput m x
+      = case m of
+          M000 -> com {cMem = M.adjust (const (head is)) x mem,
+                       cPC = pc + 2,
+                       cIn = drop 1 is}
+          _    -> error "cant write im val"
+    doOutput m x = com {cPC = pc + 2,
+                        cOut = opt}
       where
         opt = case m of
                 M000 -> fnd x
@@ -307,8 +310,65 @@ step com@(Computer mem pc i _ h)
                     M011 -> (    x,     y)
                     _    -> error "too many params"
 
+
+prog1 = "1,0,0,0,99"
+prog2 = "2,3,0,3,99"
+prog3 = "2,4,4,5,99,0"
+prog4 = "1,1,1,4,99,5,6,0,99"
+
+out1 = "2,0,0,0,99"
+out2 = "2,3,0,6,99"
+out3 = "2,4,4,5,99,9801"
+out4 = "30,1,1,4,2,5,6,0,99"
+
+progs = [prog1,prog2,prog3,prog4]
+outs = [out1,out2,out3,out4]
+
+runProgram :: [Int] -> String -> [Computer]
+runProgram inp prog = takeWhile (not . isHalt) $ iterate step $ mkComputer inp prog
+
+runTillHalt = (last .) .  runTillHalts
+runTillHalts inp prog = takeWhile (not . isHalt) $ iterate step $ mkComputer inp prog
+
+runProgram'' inp prog = take (succ pass) run
+  where
+    run = iterate step $ mkComputer inp prog
+    pass = length $ takeWhile ((==0) . cOut) run
+
+runProgram' inp prog = memToProg . cMem . last $ runProgram inp prog
+
+-- test for day 2
+tests = and $ zipWith (==) outs (runProgram' [0] <$> progs)
+
+prog5 = "3,0,4,0,99"
+
+-- new param mode enable
+prog6 = "1002,4,3,4"
+prog7 = "3,9,8,9,10,9,4,9,99,-1,8"  -- inp == 8 -> out = 1
+prog8 = "3,9,7,9,10,9,4,9,99,-1,8"  -- inp < 8  -> out = 1
+prog9 = "3,3,1108,-1,8,3,4,3,99"    -- inp == 8 -> out = 1
+prog10 = "3,3,1107,-1,8,3,4,3,99"   -- inp < 8  -> out = 1
+prog11 = "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"  -- inp == 0 -> out = 0 else 1
+
+test7 = (== 1) . cOut $ runTillHalt [8] prog7
+test8 = (== 1) . cOut $ runTillHalt [7] prog8
+test9 = (== 1) . cOut $ runTillHalt [8] prog9
+test10 = (== 1) . cOut $ runTillHalt [7] prog10
+test11a = (== 0) . cOut $ runTillHalt [0] prog11
+test11b = (== 1) . cOut $ runTillHalt [5] prog11
+tests' = and [test7, test8, test9, test10, test11a, test11b]
+
+-- -- 15097178
+-- part_1 :: String -> IO ()
+-- part_1 prog = print $ last $ runProgram [1] prog
+--
+-- -- 1558663
+-- part_2 :: String -> IO ()
+-- part_2 prog = print $ last $ runProgram [5] prog
+
+
 runTillHalts' :: (Int,Int) -> String -> [Computer]
-runTillHalts' (md,inp) prog = takeWhile (not . isHalt) $ iterate step $ mkComputer' (md,inp) prog
+runTillHalts' (md,inp) prog = takeWhile (not . isHalt) $ iterate step $ mkComputer [md,inp] prog
 
 runForOutput :: (Int,Int) -> String -> Int
 runForOutput = ((cOut .) last .) .  runTillHalts'
@@ -323,11 +383,38 @@ config_1 prog [m0,m1,m2,m3,m4] = out4
     out4 = runForOutput (m4, out3) prog
 config_1 _ _ = undefined
 
+config_2 :: String -> [Int] -> Int
+config_2 prog [m0,m1,m2,m3,m4] = out4
+  where
+    out0 = cOut . next $ mkComputer [m0,0,out4] prog
+    out1 = cOut . next $ mkComputer [m1,out0]   prog
+    out2 = cOut . next $ mkComputer [m2,out1]   prog
+    out3 = cOut . next $ mkComputer [m3,out2]   prog
+    out4 = cOut . next $ mkComputer [m4,out3]   prog
+config_2 _ _ = undefined
+
 -- 929800
 part_1 :: String -> IO ()
 part_1 prog = print $ maximum $ config_1 prog <$> permutations [0..4]
 
+next :: Computer -> Computer
+next c | isHalt c = c
+       | otherwise = next $ step c
+
+next' :: Computer -> Computer
+next' c = next' $ step c
+
 main :: IO ()
 main = do
+  print tests
+  print tests'
+
   prog <- getLine
   part_1 prog
+
+  -- print $ next $ mkComputer [0,0] prog
+
+  print $ maximum $ config_2 prog <$> permutations [0..4]
+  print $ maximum $ config_2 prog <$> permutations [5..9]
+
+  -- mapM_ print $ runProgram [0,1] prog
