@@ -8,13 +8,6 @@ from enum import Enum
 def read_mem(inp):
     return [int(i) for i in inp.split(',')]
 
-test1 = "1,0,0,3,99"
-test2 = "1,9,10,3,2,3,11,0,99,30,40,50"
-
-# mem = read_mem(input())
-# mem = read_mem(test1)
-# mem = read_mem(test2)
-# print(mem)
 
 class OpCode(Enum):
     OpAdd = 1
@@ -22,27 +15,29 @@ class OpCode(Enum):
     OpHalt = 99
 
     def __str__(self):
-        ret = None
-        if self.name == 'OpAdd':
+        if self.name() == 'OpAdd':
             return "+"
-        if self.name == 'OpMul':
+        if self.name() == 'OpMul':
             return "*"
-        if self.name == 'OpHalt':
+        if self.name() == 'OpHalt':
             return "H"
+        return None
 
 class Oper():
     def __init__(self, opcode, *args):
         self.opcode = opcode
         largs = len(args)
-        self.b = args[0] if largs >= 1 else None
-        self.c = args[1] if largs >= 2 else None
-        self.d = args[2] if largs >= 3 else None
+        self.fst = args[0] if largs >= 1 else None
+        self.snd = args[1] if largs >= 2 else None
+        self.trd = args[2] if largs >= 3 else None
 
     def __repr__(self):
         if self.opcode in [OpCode.OpAdd, OpCode.OpMul]:
-            return f'{self.b:>4} {self.opcode} {self.c:>4} -> {self.d:>4}'
+            return f'{self.fst:>4} {self.opcode} {self.snd:>4} -> {self.trd:>4}'
         if self.opcode in [OpCode.OpHalt]:
             return f'{self.opcode}'
+        return None
+
 
 def parse(xs):
     op = None
@@ -60,40 +55,97 @@ def parse(xs):
         print(f'error uknown op: {a}')
     return op
 
-def run_step(pc):
-    next = 0
+
+def run_step(mem, pc):
+    '''
+    run single step from  memory at program counter
+    '''
+    nxt = 0
     halt = False
-    op = parse(mem[pc:])
-    print(f'pc: {pc}, op: {op}, mem: {mem[pc:pc+5]}')
-    if not op:
+    opr = parse(mem[pc:])
+    # print(f'pc: {pc}, op: {op}, mem: {mem[pc:pc+5]}')
+    if not opr:
         print(f'error pc: {pc} mem {mem[pc:pc+10]}')
         return
 
-    if op.opcode == OpCode.OpAdd:
-        next = 4
-        mem[op.d] = mem[op.b] + mem[op.c]
-    if op.opcode == OpCode.OpMul:
-        next = 4
-        mem[op.d] = mem[op.b] * mem[op.c]
-    if op.opcode == OpCode.OpHalt:
+    if opr.opcode == OpCode.OpAdd:
+        nxt = 4
+        mem[opr.trd] = mem[opr.fst] + mem[opr.snd]
+    if opr.opcode == OpCode.OpMul:
+        nxt = 4
+        mem[opr.trd] = mem[opr.fst] * mem[opr.snd]
+    if opr.opcode == OpCode.OpHalt:
         halt = True
 
-    return (pc + next, halt)
+    return (pc + nxt, halt)
 
-def run():
-    n = 0
+
+def run(mem):
+    '''
+    run entire memory
+    '''
+    nxt = 0
     while True:
-        n,c = run_step(n)
-        if c:
+        nxt, hlt = run_step(mem, nxt)
+        if hlt:
             break
 
-    return mem[0]
+    return mem
 
-def part_1():
-    global mem
-    mem = read_mem(input())
-    mem[1] = 12
-    mem[2] = 2
-    print(f'ans: {run()}')
 
-part_1()
+def tests():
+    inp_1 = "1,0,0,3,99"
+    inp_2 = "1,9,10,3,2,3,11,0,99,30,40,50"
+    inp_3 = "1,0,0,0,99"
+    inp_4 = "2,3,0,3,99"
+    inp_5 = "2,4,4,5,99,0"
+    inp_6 = "1,1,1,4,99,5,6,0,99"
+
+    out_1 = "1,0,0,2,99"
+    out_2 = "3500,9,10,70,2,3,11,0,99,30,40,50"
+    out_3 = "2,0,0,0,99"
+    out_4 = "2,3,0,6,99"
+    out_5 = "2,4,4,5,99,9801"
+    out_6 = "30,1,1,4,2,5,6,0,99"
+
+    inps = [inp_1, inp_2, inp_3, inp_4, inp_5, inp_6]
+    outs = [out_1, out_2, out_3, out_4, out_5, out_6]
+
+    def test(inp, out):
+        assert run(read_mem(inp)) == read_mem(out)
+
+    for case in zip(inps, outs):
+        test(*case)
+
+
+def run_with(p, a, b):
+    mem = read_mem(p)
+    mem[1] = a
+    mem[2] = b
+    out = run(mem)[0]
+    return out
+
+
+def part_1(inp):
+    return run_with(inp, 12, 2)
+
+
+def part_2(inp):
+    rng = range(100)
+    cases = [(x, y) for x in rng for y in rng]
+    for noun, verb in cases:
+        out = run_with(inp, noun, verb)
+        if out == 19690720:
+            return 100 * noun + verb
+
+
+def main():
+    inp = input()
+    print(f'part_1 : {part_1(inp)}')
+    print(f'part_2 : {part_2(inp)}')
+
+
+tests()
+main()
+
+
