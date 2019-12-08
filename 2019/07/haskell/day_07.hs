@@ -2,17 +2,15 @@
 -- https://adventofcode.com/2019/day/7
 -- Day5 code re-write with multiple input output
 ---------------------------------------------------------------------
-
-import Data.List.Extra
-
-import           Text.ParserCombinators.ReadP (ReadP)
-import qualified Text.ParserCombinators.ReadP as R
-import           Text.ParserCombinators.ReadPrec (lift)
-import           Text.Read (readPrec)
-import Data.Char
+import Text.ParserCombinators.ReadP (ReadP)
+import Text.ParserCombinators.ReadPrec (lift)
+import Text.Read (readPrec)
 import Control.Monad
+import Data.Char
+import Data.List.Extra
+import Data.Maybe
 import qualified Data.IntMap as M
-import Text.Printf
+import qualified Text.ParserCombinators.ReadP as R
 
 data Operation
   = Add Mode Int Int Int
@@ -177,121 +175,73 @@ readMode = (R.string "1"   >> pure M001)
      R.+++ (R.string "110" >> pure M110)
      R.+++ (R.string "111" >> pure M111)
 
-
 readStep :: ReadP Operation
 readStep = (readOper <* readComma) R.<++ readOper
-
-stepR :: ReadS Operation
-stepR = R.readP_to_S readStep
 
 type Code = [Operation]
 
 readCode :: ReadP Code
 readCode = R.many (readStep R.+++ readOper)
 
+test0,test1,test2,test3,test4,test5 :: (Program, Int, Int)
+test0 = ("3,9,8,9,10,9,4,9,99,-1,8", 8, 1)  -- inp == 8 -> out = 1
+test1 = ("3,9,7,9,10,9,4,9,99,-1,8", 7, 1)  -- inp < 8  -> out = 1
+test2 = ("3,3,1108,-1,8,3,4,3,99",   8, 1)  -- inp == 8 -> out = 1
+test3 = ("3,3,1107,-1,8,3,4,3,99",   7, 1)   -- inp < 8  -> out = 1
+test4 = ("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9", 0, 0)  -- inp == 0 -> out = 0 else 1
+test5 = ("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9", 5, 1)  -- inp == 0 -> out = 0 else 1
+
+tests :: Bool
+tests = and $ test <$> [test0,test1,test2,test3,test4,test5]
+  where
+    test (prog, inp, out) = (== out) . last $ runMem (loadProg prog) [inp] 0
+
+type Program = String
 type Memory = M.IntMap Int
 
-loadProg :: String -> Memory
+loadProg :: Program -> Memory
 loadProg = M.fromList . zip [0..] . map read . splitOn ","
-
-memToProg :: Memory -> String
-memToProg = intercalate "," . map show . M.elems
 
 memToProg' :: Int -> Memory -> String
 memToProg' n = intercalate "," . map show . drop n . M.elems
 
-data Computer
-  = Computer {
-    cMem :: Memory,       -- memory for instruction and codes
-    cPC :: Int,           -- program counter
-    cIn :: [Int],         -- inputs
-    cOut :: Int,          -- output
-    isHalt :: Bool
-  }
-  -- deriving Show
+type Input = [Int]
+type PC = Int
 
-instance Show Computer where
-  show (Computer mem pc _ o _)
-    = printf "pc: %4i out: %4i op: %-16s" pc o op
-    <> "mem@pc: "
-    <> take 15 mem'
-    where
-      mem' = memToProg' pc mem
-      op = show $ fst $ head $ R.readP_to_S readOper mem'
+peekOp :: Memory -> Int -> Maybe Operation
+peekOp mem pc = fst <$> listToMaybe ( R.readP_to_S readOper $ memToProg' pc mem)
 
-
-mkComputer :: [Int] -> String -> Computer
-mkComputer is prog = Computer (loadProg prog) 0 is 0 False
-
-step :: Computer -> Computer
-step com@(Computer mem pc is o h)
-  | null parse     = error $ "null parse:"
-                  <> show pc <> ":"
-                  <> show ( take 20 next)
-  | otherwise
-    = case op of
-        Add m x y z -> doAdd m x y z
-        Mul m x y z -> doMul m x y z
+runMem :: Memory -> Input -> PC -> [Int]
+runMem mem ins pc
+  = case op of
+        Halt        -> []
         Input m x   -> doInput m x
-        Output m x  -> doOutput m x
-        Halt        -> com {isHalt = True}
+        Add m x y z -> doAdd m x y z
         Jnz m x y   -> doJnz m x y
+        Mul m x y z -> doMul m x y z
+        Output m x  -> doOutput m x
         Jz m x y    -> doJz m x y
         Lt m x y z  -> doLt m x y z
         Eq m x y z  -> doEq m x y z
   where
-    next = intercalate "," . map show . drop pc $ M.elems mem
-    parse = stepR . intercalate "," . map show . drop pc $ M.elems mem
-    op = fst . head $ parse
+    op = case peekOp mem pc of
+          Just x  -> x
+          Nothing -> error "invalid operation"
     fnd k = M.findWithDefault 0 k mem
-    doInput m x
-      = case m of
-          M000 -> com {cMem = M.adjust (const (head is)) x mem,
-                       cPC = pc + 2,
-                       cIn = drop 1 is}
-          _    -> error "cant write im val"
-    doOutput m x = com {cPC = pc + 2,
-                        cOut = opt}
+    doInput m x = runMem mem' (tail ins) (pc + 2)
       where
-        opt = case m of
-                M000 -> fnd x
-                M001 -> x
-                _    -> error "too many params"
-    doAdd m x y z = com {cMem = mop, cPC = pc + 4}
+        mem' = case m of
+                 M000 -> M.adjust (const (head ins)) x mem
+                 _    -> error "cant write im val"
+    doAdd m x y z = runMem mem' ins (pc + 4)
       where
-        mop = case m of
+        mem' = case m of
                 M000 -> M.adjust (const $ fnd x + fnd y) z mem
                 M001 -> M.adjust (const $     x + fnd y) z mem
                 M010 -> M.adjust (const $ fnd x +     y) z mem
                 M011 -> M.adjust (const $     x +     y) z mem
                 _    -> error "cant write im val"
-    doMul m x y z = com {cMem = mop, cPC = pc + 4}
-      where
-        mop = case m of
-                M000 -> M.adjust (const $ fnd x * fnd y) z mem
-                M001 -> M.adjust (const $     x * fnd y) z mem
-                M010 -> M.adjust (const $ fnd x *     y) z mem
-                M011 -> M.adjust (const $     x *     y) z mem
-                _    -> error "cant write im val"
-    doEq m x y z = com {cMem = mop, cPC = pc + 4}
-      where
-        mop = M.adjust (const $ if x' == y' then 1 else 0) z mem
-        (x',y') = case m of
-                    M000 -> (fnd x, fnd y)
-                    M001 -> (    x, fnd y)
-                    M010 -> (fnd x,     y)
-                    M011 -> (    x,     y)
-                    _    -> error "cant write im val"
-    doLt m x y z = com {cMem = mop, cPC = pc + 4}
-      where
-        mop = M.adjust (const $ if x' < y' then 1 else 0) z mem
-        (x',y') = case m of
-                    M000 -> (fnd x, fnd y)
-                    M001 -> (    x, fnd y)
-                    M010 -> (fnd x,     y)
-                    M011 -> (    x,     y)
-                    _    -> error "cant write im val"
-    doJnz m x y = com {cPC = tgt}
+    doJnz m x y = runMem mem ins tgt
       where
         tgt = if x' /= 0 then y' else pc + 3
         (x',y') = case m of
@@ -300,7 +250,7 @@ step com@(Computer mem pc is o h)
                     M010 -> (fnd x,     y)
                     M011 -> (    x,     y)
                     _    -> error "too many params"
-    doJz m x y = com {cPC = tgt}
+    doJz m x y = runMem mem ins tgt
       where
         tgt = if x' == 0 then y' else pc + 3
         (x',y') = case m of
@@ -309,112 +259,61 @@ step com@(Computer mem pc is o h)
                     M010 -> (fnd x,     y)
                     M011 -> (    x,     y)
                     _    -> error "too many params"
+    doMul m x y z = runMem mem' ins (pc + 4)
+      where
+        mem' = case m of
+                M000 -> M.adjust (const $ fnd x * fnd y) z mem
+                M001 -> M.adjust (const $     x * fnd y) z mem
+                M010 -> M.adjust (const $ fnd x *     y) z mem
+                M011 -> M.adjust (const $     x *     y) z mem
+                _    -> error "cant write im val"
+    doOutput m x = opt : runMem mem ins (pc + 2)
+      where
+        opt = case m of
+                M000 -> fnd x
+                M001 -> x
+                _    -> error "too many params"
+    doEq m x y z = runMem mem' ins (pc + 4)
+      where
+        mem' = M.adjust (const $ if x' == y' then 1 else 0) z mem
+        (x',y') = case m of
+                    M000 -> (fnd x, fnd y)
+                    M001 -> (    x, fnd y)
+                    M010 -> (fnd x,     y)
+                    M011 -> (    x,     y)
+                    _    -> error "cant write im val"
+    doLt m x y z = runMem mem' ins (pc + 4)
+      where
+        mem' = M.adjust (const $ if x' < y' then 1 else 0) z mem
+        (x',y') = case m of
+                    M000 -> (fnd x, fnd y)
+                    M001 -> (    x, fnd y)
+                    M010 -> (fnd x,     y)
+                    M011 -> (    x,     y)
+                    _    -> error "cant write im val"
 
-
-prog1 = "1,0,0,0,99"
-prog2 = "2,3,0,3,99"
-prog3 = "2,4,4,5,99,0"
-prog4 = "1,1,1,4,99,5,6,0,99"
-
-out1 = "2,0,0,0,99"
-out2 = "2,3,0,6,99"
-out3 = "2,4,4,5,99,9801"
-out4 = "30,1,1,4,2,5,6,0,99"
-
-progs = [prog1,prog2,prog3,prog4]
-outs = [out1,out2,out3,out4]
-
-runProgram :: [Int] -> String -> [Computer]
-runProgram inp prog = takeWhile (not . isHalt) $ iterate step $ mkComputer inp prog
-
-runTillHalt = (last .) .  runTillHalts
-runTillHalts inp prog = takeWhile (not . isHalt) $ iterate step $ mkComputer inp prog
-
-runProgram'' inp prog = take (succ pass) run
+config :: Memory -> [Int] -> Int
+config mem [m0,m1,m2,m3,m4] = last ot4
   where
-    run = iterate step $ mkComputer inp prog
-    pass = length $ takeWhile ((==0) . cOut) run
-
-runProgram' inp prog = memToProg . cMem . last $ runProgram inp prog
-
--- test for day 2
-tests = and $ zipWith (==) outs (runProgram' [0] <$> progs)
-
-prog5 = "3,0,4,0,99"
-
--- new param mode enable
-prog6 = "1002,4,3,4"
-prog7 = "3,9,8,9,10,9,4,9,99,-1,8"  -- inp == 8 -> out = 1
-prog8 = "3,9,7,9,10,9,4,9,99,-1,8"  -- inp < 8  -> out = 1
-prog9 = "3,3,1108,-1,8,3,4,3,99"    -- inp == 8 -> out = 1
-prog10 = "3,3,1107,-1,8,3,4,3,99"   -- inp < 8  -> out = 1
-prog11 = "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"  -- inp == 0 -> out = 0 else 1
-
-test7 = (== 1) . cOut $ runTillHalt [8] prog7
-test8 = (== 1) . cOut $ runTillHalt [7] prog8
-test9 = (== 1) . cOut $ runTillHalt [8] prog9
-test10 = (== 1) . cOut $ runTillHalt [7] prog10
-test11a = (== 0) . cOut $ runTillHalt [0] prog11
-test11b = (== 1) . cOut $ runTillHalt [5] prog11
-tests' = and [test7, test8, test9, test10, test11a, test11b]
-
--- -- 15097178
--- part_1 :: String -> IO ()
--- part_1 prog = print $ last $ runProgram [1] prog
---
--- -- 1558663
--- part_2 :: String -> IO ()
--- part_2 prog = print $ last $ runProgram [5] prog
-
-
-runTillHalts' :: (Int,Int) -> String -> [Computer]
-runTillHalts' (md,inp) prog = takeWhile (not . isHalt) $ iterate step $ mkComputer [md,inp] prog
-
-runForOutput :: (Int,Int) -> String -> Int
-runForOutput = ((cOut .) last .) .  runTillHalts'
-
-config_1 :: String -> [Int] -> Int
-config_1 prog [m0,m1,m2,m3,m4] = out4
-  where
-    out0 = runForOutput (m0, 0)    prog
-    out1 = runForOutput (m1, out0) prog
-    out2 = runForOutput (m2, out1) prog
-    out3 = runForOutput (m3, out2) prog
-    out4 = runForOutput (m4, out3) prog
-config_1 _ _ = undefined
-
-config_2 :: String -> [Int] -> Int
-config_2 prog [m0,m1,m2,m3,m4] = out4
-  where
-    out0 = cOut . next $ mkComputer [m0,0,out4] prog
-    out1 = cOut . next $ mkComputer [m1,out0]   prog
-    out2 = cOut . next $ mkComputer [m2,out1]   prog
-    out3 = cOut . next $ mkComputer [m3,out2]   prog
-    out4 = cOut . next $ mkComputer [m4,out3]   prog
-config_2 _ _ = undefined
+    ot0 = runMem mem (m0:0:ot4) 0
+    ot1 = runMem mem (m1:ot0)   0
+    ot2 = runMem mem (m2:ot1)   0
+    ot3 = runMem mem (m3:ot2)   0
+    ot4 = runMem mem (m4:ot3)   0
+config _ _ = undefined
 
 -- 929800
-part_1 :: String -> IO ()
-part_1 prog = print $ maximum $ config_1 prog <$> permutations [0..4]
+part_1 :: Memory -> IO ()
+part_1 mem = print $ maximum $ config mem <$> permutations [0..4]
 
-next :: Computer -> Computer
-next c | isHalt c = c
-       | otherwise = next $ step c
-
-next' :: Computer -> Computer
-next' c = next' $ step c
+-- 15432220
+part_2 :: Memory -> IO ()
+part_2 mem = print $ maximum $ config mem <$> permutations [5..9]
 
 main :: IO ()
 main = do
   print tests
-  print tests'
 
   prog <- getLine
-  part_1 prog
-
-  -- print $ next $ mkComputer [0,0] prog
-
-  print $ maximum $ config_2 prog <$> permutations [0..4]
-  print $ maximum $ config_2 prog <$> permutations [5..9]
-
-  -- mapM_ print $ runProgram [0,1] prog
+  part_1 (loadProg prog)
+  part_2 (loadProg prog)
