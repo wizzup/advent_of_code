@@ -1,3 +1,7 @@
+---------------------------------------------------------------------
+-- https://adventofcode.com/2019/day/3
+---------------------------------------------------------------------
+
 import Control.Monad (replicateM)
 import qualified Data.List.Extra as L
 import qualified Data.Set as S

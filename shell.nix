@@ -1,10 +1,9 @@
 { pkgs ? import <nixpkgs> {} }:
 
 with pkgs;
-# with haskellPackages;
 
 let
-  ghc = haskellPackages.ghcWithPackages (p: with p; [
+  myghc = haskellPackages.ghcWithPackages (p: with p; [
           QuickCheck
           cryptohash-md5       # for md5 hash (2015, day4)
           base16-bytestring    # for hex conversion (2015, day4)
@@ -14,8 +13,9 @@ let
         ]);
 
   hss = with haskellPackages; [
+    myghc
+
     cabal-install
-    ghc
     hlint
     ghcid
     hie
@@ -23,7 +23,17 @@ let
     hoogle
   ];
 
-  pys = [ python3 ];
+  pys = with python3Packages; [
+    ptpython
+
+    (python3.withPackages (p: with p; [
+      pylint
+      flake8
+      mypy
+
+      numpy
+    ]))
+  ];
 in
   mkShell {
     name = "aoc-sh";

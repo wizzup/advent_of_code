@@ -1,3 +1,7 @@
+---------------------------------------------------------------------
+-- https://adventofcode.com/2019/day/4
+---------------------------------------------------------------------
+
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as M
 import Data.List.Extra
