@@ -1,0 +1,97 @@
+cabal-version:       2.2
+name:                AOC19
+version:             0.1.0.0
+author:              wisut hantanong
+maintainer:          wizzup@gmail.com
+build-type:          Simple
+extra-source-files:  README.md
+
+
+common global-common
+  default-language:  Haskell2010
+  build-depends:     base
+  ghc-options:       -Wall
+                     -O2
+  build-depends:     extra
+                   , containers
+
+common exec-common
+  import:            global-common
+  hs-source-dirs:    exe
+  ghc-options:       -Wall
+                     -threaded
+                     -rtsopts
+                     -with-rtsopts=-N
+                     -O2
+
+common intcode-common
+  import:            exec-common
+  build-depends:     AOC19
+
+library
+  import: global-common
+  hs-source-dirs:    src
+  exposed-modules:   IntCode
+
+test-suite           test-IntCode
+  import:            intcode-common
+  type:              exitcode-stdio-1.0
+  main-is:           test-IntCode.hs
+  hs-source-dirs:    test
+
+
+executable           day01
+  import: exec-common
+  main-is:           Day01.hs
+
+executable           day02
+  import: intcode-common
+  main-is:           Day02.hs
+
+executable           day03
+  import: exec-common
+  main-is:           Day03.hs
+
+executable           day04
+  import: exec-common
+  main-is:           Day04.hs
+
+executable           day05
+  import: intcode-common
+  main-is:           Day05.hs
+
+executable           day06
+  import: exec-common
+  main-is:           Day06.hs
+
+executable           day07
+  import: intcode-common
+  main-is:           Day07.hs
+
+executable           day08
+  import: exec-common
+  main-is:           Day08.hs
+
+executable           day09
+  import: intcode-common
+  main-is:           Day09.hs
+
+executable           day10
+  import: exec-common
+  main-is:           Day10.hs
+
+executable           day11
+  import: intcode-common
+  main-is:           Day11.hs
+
+executable           day12
+  import: exec-common
+  main-is:           Day12.hs
+
+executable           day13
+  import: intcode-common
+  main-is:           Day13.hs
+
+executable           day16
+  import: intcode-common
+  main-is:           Day16.hs
