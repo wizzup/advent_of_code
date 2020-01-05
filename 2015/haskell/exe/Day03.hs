@@ -1,13 +1,13 @@
-module Day_03
-( partOne
-, partTwo
-) where
-
 import Control.Arrow ((***))
 import Data.Set (Set)
 import qualified Data.Set as S
 
 import Common (bothF, bothV)
+
+main :: IO ()
+main = do
+  partOne >>= print
+  partTwo >>= print
 
 partOne :: IO Int
 partOne = process stepOne

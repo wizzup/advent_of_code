@@ -1,8 +1,3 @@
-module Day_02
-( partOne
-, partTwo
-) where
-
 import           Data.List (sort)
 import           Text.ParserCombinators.ReadP (ReadP)
 import           Text.ParserCombinators.ReadPrec (lift)
@@ -10,6 +5,11 @@ import           Text.Read (readPrec)
 import qualified Text.ParserCombinators.ReadP as RP
 
 import Common (rpInt)
+
+main :: IO ()
+main = do
+  partOne >>= print
+  partTwo >>= print
 
 partOne :: IO Int
 partOne = process $ paperSize . read

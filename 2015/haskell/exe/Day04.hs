@@ -3,18 +3,17 @@
 -- |
 -- >>> :set -XOverloadedStrings
 
-module Day_04
-( partOne
-, partTwo
-) where
-
-
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B
 import qualified Crypto.Hash.MD5 as MD5
 
 import Data.ByteString.Base16 (encode)
 import Control.Monad
+
+main :: IO ()
+main = do
+  partOne >>= print
+  partTwo >>= print
 
 input :: ByteString
 input = "bgvyzdsv"

@@ -1,0 +1,52 @@
+cabal-version:       2.2
+name:                AOC15
+version:             0.1.0.0
+
+common global-common
+  default-language:  Haskell2010
+  build-depends:     base
+  ghc-options:       -Wall
+                     -O2
+  build-depends:     extra
+                   , containers
+
+common exec-common
+  import:            global-common
+  hs-source-dirs:    exe
+  ghc-options:       -threaded
+                     -rtsopts
+                     -with-rtsopts=-N
+  build-depends:     AOC15
+
+library
+  import: global-common
+  hs-source-dirs:    src
+  exposed-modules:   Common
+
+executable           day01
+  import: exec-common
+  main-is:           Day01.hs
+
+executable           day02
+  import: exec-common
+  main-is:           Day02.hs
+
+executable           day03
+  import: exec-common
+  main-is:           Day03.hs
+
+executable           day04
+  import: exec-common
+  main-is:           Day04.hs
+  build-depends:     cryptohash-md5
+                   , bytestring
+                   , base16-bytestring
+
+executable           day05
+  import: exec-common
+  main-is:           Day05.hs
+  build-depends:     regex-posix
+
+executable           day06
+  import: exec-common
+  main-is:           Day06.hs

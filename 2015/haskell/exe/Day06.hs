@@ -1,8 +1,3 @@
-module Day_06
-( partOne
-, partTwo
-) where
-
 import           Data.Foldable (foldr', foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -12,6 +7,11 @@ import           Text.ParserCombinators.ReadPrec (lift)
 import           Text.Read (readPrec)
 
 import Common (rpInt)
+
+main :: IO ()
+main = do
+  partOne >>= print
+  partTwo >>= print
 
 partOne :: IO Int
 partOne = process one read

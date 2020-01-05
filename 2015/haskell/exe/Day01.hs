@@ -1,7 +1,7 @@
-module Day_01
-( partOne
-, partTwo
-) where
+main :: IO ()
+main = do
+  partOne >>= print
+  partTwo >>= print
 
 partOne :: IO Int
 partOne = process countP

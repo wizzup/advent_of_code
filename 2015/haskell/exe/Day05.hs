@@ -1,10 +1,10 @@
-module Day_05
-( partOne
-, partTwo
-) where
-
 -- import Data.List (group, isInfixOf)
 import Text.Regex.Posix ((=~))
+
+main :: IO ()
+main = do
+  partOne >>= print
+  partTwo >>= print
 
 partOne :: IO Int
 partOne = process isNice
